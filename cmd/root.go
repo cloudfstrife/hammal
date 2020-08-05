@@ -15,6 +15,11 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+//RegistCmd add sub command
+func RegistCmd(c *cobra.Command) {
+	rootCmd.AddCommand(c)
+}
+
 //Execute root runner
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
