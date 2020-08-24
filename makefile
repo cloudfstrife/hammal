@@ -1,13 +1,10 @@
-# 目标可执行程序名称
-NAME=hammel
-
 # 主版本
 VERSION ?= $(shell git describe --tags --always --dirty)
 
 # build 序列
 BUILD_NO ?= $(shell git show -s --format=%H)
 
-# go文件列表
+# Go文件列表
 GOFILES := $(shell find . ! -path "./vendor/*" -name "*.go")
 
 # 支持的操作系统列表
@@ -18,6 +15,9 @@ GOARCHES := 386 amd64
 # 目标输出目录
 DIST_FOLDER := dist
 
+# 目标可执行程序源码所在的目录
+COMMAND_ROOT := cmd
+
 # 构建附加选项
 BUILD_OPTS := -ldflags "-s -w"
 
@@ -26,6 +26,9 @@ TEST_OPTS := -v
 
 # 基准测试附加选项
 BENCHMARK_OPTS := -cpu 1,2,3,4,5,6,7,8
+
+# 目标可执行程序列表
+COMMAND_LIST := pack unpack
 
 # sonar 相关报告输出路径（包括：单元测试报告输出，单元测试覆盖率报告，golint 报告，golangci-lint 报告）
 REPORT_FOLDER := sonar
@@ -40,17 +43,17 @@ GOLINT_REPORT := ${REPORT_FOLDER}/golint.report
 
 .DEFAULT: build 
 
-build: ${DIST_FOLDER}/${NAME}/${NAME}
-
 # 构建目标
-${DIST_FOLDER}/${NAME}/${NAME}: ${GOFILES}
-	go build ${BUILD_OPTS} -o $@ 
+build: $(GOFILES)
+	@for command in ${COMMAND_LIST} ; do 																		\
+		go build ${BUILD_OPTS} -o ${DIST_FOLDER}/$${command}/$${command} ./${COMMAND_ROOT}/$${command} ;		\
+	done																										\
 
 # 格式化
 format:
-	@for f in ${GOFILES} ; do 																			\
-		gofmt -w $${f};																					\
-	done																								\
+	@for f in ${GOFILES} ; do 																					\
+		gofmt -w $${f};																							\
+	done																										\
 
 # 单元测试
 test: 
@@ -71,17 +74,23 @@ sonar:
 
 # 构建所有支持的操作系统和架构的目标文件
 all:
-	@for os in ${GOOSES} ; do																			\
-		for arch in ${GOARCHES} ; do 																	\
-			if [ "$${os}" = "windows" ] ;then															\
-				GOOS=$${os} GOARCH=$${arch}  															\
-				go build ${BUILD_OPTS} -o ${DIST_FOLDER}/${NAME}/$${os}_$${arch}/${NAME}.exe ;			\
-			else																						\
-				GOOS=$${os} GOARCH=$${arch}  															\
-				go build ${BUILD_OPTS} -o ${DIST_FOLDER}/${NAME}/$${os}_$${arch}/${NAME} ;				\
-			fi																							\
-		done																							\
-	done																								\
+	@for command in ${COMMAND_LIST} ; do 																	\
+		for os in ${GOOSES} ; do																			\
+			for arch in ${GOARCHES} ; do 																	\
+				if [ "$${os}" = "windows" ] ;then															\
+					GOOS=$${os} GOARCH=$${arch}  															\
+					go build ${BUILD_OPTS} 																	\
+					-o ${DIST_FOLDER}/$${command}/$${os}_$${arch}/$${command}.exe 							\
+					./${COMMAND_ROOT}/$${command} ;															\
+				else																						\
+					GOOS=$${os} GOARCH=$${arch}  															\
+					go build ${BUILD_OPTS} 																	\
+					-o ${DIST_FOLDER}/$${command}/$${os}_$${arch}/$${command} 								\
+					./${COMMAND_ROOT}/$${command} ;															\
+				fi																							\
+			done																							\
+		done																								\
+	done																									\
 
 # 清理
 clean:
